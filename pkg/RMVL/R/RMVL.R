@@ -287,6 +287,79 @@ mvl_indexed_copy<-function(MVLHANDLE, x, indices, name=NULL, only.columns=NULL) 
 	return(invisible(offset))
 	}
 	
+	
+#' Merge two MVL data frames and write the result
+#'
+#' @param MVLHANDLE a handle to MVL file produced by \code{mvl_open()}
+#' @param df1 a data.frame stored in MVL file
+#' @param df2 a data.frame stored in MVL file
+#' @param name if specified add a named entry to MVL file directory
+#' @param by  list of columns to use as key
+#' @param by.x  list of columns to use as key for \code{df1}
+#' @param by.y  list of columns to use as key for \code{df1}
+#' @param suffixes  rename columns with identical names using these suffixes
+#' @param only.columns.x only copy these columns from df1
+#' @param only.columns.y only copy these columns from df2
+#'  
+#' @export
+#'
+mvl_merge<-function(MVLHANDLE, df1, df2, name=NULL, by=NULL, by.x=by, by.y=by, suffixes=c(".x", ".y"), only.columns.x=NULL, only.columns.y=NULL)
+{
+if(is.null(by.x) || is.null(by.y))stop("You need to specify which columns to merge using by, or by.x and by.y")
+
+L1<-lapply(by.x, function(x){return(df1[,x,ref=TRUE])})
+L2<-lapply(by.y, function(x){return(df2[,x,ref=TRUE])})
+
+cols1<-names(df1)
+if(!is.null(only.columns.x)) {
+	cols1<-cols1[cols1 %in% only.columns.x]
+	}
+
+cols1<-cols1[!(cols1 %in% by.x)]
+cols1<-c(by.x, cols1)
+
+cols2<-names(df2)
+if(!is.null(only.columns.y)) {
+	cols2<-cols2[cols2 %in% only.columns.y]
+	}
+cols2<-cols2[!(cols2 %in% by.y)]
+
+rename.cols<-intersect(cols1, cols2)
+
+merge_plan<-mvl_find_matches(L1, L2)
+
+L<-list()
+
+if(length(cols1)>0)
+for(i in 1:length(cols1)) {
+	L[[length(L)+1]]<-mvl_indexed_copy(MVLHANDLE, df1[,cols1[[i]],ref=TRUE], merge_plan[["index1"]])
+	}
+
+if(length(cols2)>0)
+for(i in 1:length(cols2)) {
+	L[[length(L)+1]]<-mvl_indexed_copy(MVLHANDLE, df2[,cols2[[i]],ref=TRUE], merge_plan[["index2"]])
+	}
+	
+Fr<-cols1 %in% rename.cols
+if(any(Fr)) {
+	cols1[Fr]<-paste(cols1[Fr], suffixes[[1]])
+	}
+Fr<-cols2 %in% rename.cols
+if(any(Fr)) {
+	cols2[Fr]<-paste(cols2[Fr], suffixes[[2]])
+	}
+n<-as.character(c(cols1, cols2))
+
+L<-unlist(L)
+class(L)<-"MVL_OFFSET"
+
+m<-mvl_write_object_metadata(MVLHANDLE, NULL, dim.override=c(mvl_xlength(merge_plan[["index1"]]), length(n)), names.override=n, class.override="data.frame")
+
+offset<-mvl_write_vector(MVLHANDLE, L, m)
+if(!is.null(name))mvl_add_directory_entries(MVLHANDLE, name, offset)
+return(invisible(offset))
+}
+	
 mvl_write_object_metadata<-function(MVLHANDLE, x, drop.rownames=FALSE, dim.override=NULL, class.override=NULL, names.override=NULL, rownames.override=NULL) {
 	n<-mvl_write_string(MVLHANDLE, "MVL_LAYOUT")
 	o<-mvl_write_string(MVLHANDLE, "R")
@@ -562,9 +635,10 @@ mvl_read_object<-function(MVLHANDLE, offset, idx=NULL, recurse=FALSE, raw=FALSE,
 			vec<-.Call("read_vectors", MVLHANDLE[["handle"]], offset)[[1]]
 		} else {
 		if(raw)
-			vec<-.Call("read_vectors_idx_raw_real", MVLHANDLE[["handle"]], offset, idx[[1]])[[1]]
+			vec<-.Call("read_vectors_idx_raw2", MVLHANDLE[["handle"]], offset, idx[[1]])[[1]]
 			else
-			vec<-.Call("read_vectors_idx_real", MVLHANDLE[["handle"]], offset, idx[[1]])[[1]]
+			vec<-.Call("read_vectors_idx2", MVLHANDLE[["handle"]], offset, idx[[1]])[[1]]
+#			vec<-.Call("read_vectors_idx_real", MVLHANDLE[["handle"]], offset, idx[[1]])[[1]]
 		}
 	if(inherits(vec, "MVL_OFFSET")) {
 		lengths<-.Call("read_lengths", MVLHANDLE[["handle"]], vec)
@@ -585,11 +659,11 @@ mvl_read_object<-function(MVLHANDLE, offset, idx=NULL, recurse=FALSE, raw=FALSE,
 #	attr(vec, "metadata")<-metadata
 	if(any(metadata[["MVL_LAYOUT"]]=="R")) {
 		if(!is.null(cl)) {
-			if(!any(cl=="data.frame") && !is.null(metadata[["dim"]]))dim(vec)<-metadata[["dim"]]
 			if(any(cl=="factor") || any(cl=="character")) {
 				vec<-mvl_flatten_string(vec)
 				if(cl=="factor")vec<-as.factor(vec)
 				}
+			if(!any(cl %in% c("data.frame")) && !is.null(metadata[["dim"]]))dim(vec)<-metadata[["dim"]]
 			#if(cl=="data.frame" && any(unlist(lapply(vec, class))=="MVL_OBJECT"))cl<-"MVL_OBJECT"
 			class(vec)<-cl
 			}
@@ -817,7 +891,7 @@ names.MVL_OBJECT<-function(x) {
 	#cat("obj class ", obj[["metadata"]][["class"]], "\n")
 	object_class<-obj[["metadata"]][["class"]]
 	if(is.null(object_class))object_class<-"NULL"
-	if(object_class=="data.frame") {
+	if(any(object_class=="data.frame")) {
 		if(...length()>1)stop("Object", obj, "has only two dimensions")
 		n<-obj[["metadata"]][["names"]]
 		if(...length()<1 || missing(..1)) {
@@ -831,14 +905,14 @@ names.MVL_OBJECT<-function(x) {
 				if(is.factor(j))j<-as.character(j)
 				j0<-match(j, n)
 				if(any(is.na(j0)))
-					stop("Unknown columns ", j[is.na(j0)])
+					stop("Unknown columns ", paste(j[is.na(j0)], collapse=" "))
 				j<-j0
 				}
 			n<-n[j]
 			}
 		if(missing(i)) {
 			if(length(j)==1 && drop) {
-				ofs<-.Call("read_vectors_idx_real", obj[["handle"]], obj[["offset"]], as.numeric(j-1))[[1]]
+				ofs<-.Call("read_vectors_idx2", obj[["handle"]], obj[["offset"]], j)[[1]]
 				metadata_offset<-.Call("read_metadata", obj[["handle"]], ofs)
 				metadata<-mvl_read_metadata(obj, metadata_offset)
 
@@ -856,10 +930,14 @@ names.MVL_OBJECT<-function(x) {
 			i<-which(i)
 			}
 		if(raw)
-			ofs<-.Call("read_vectors_idx_raw_real", obj[["handle"]], obj[["offset"]], as.numeric(j-1))[[1]]
+			ofs<-.Call("read_vectors_idx_raw2", obj[["handle"]], obj[["offset"]], j)[[1]]
 			else
-			ofs<-.Call("read_vectors_idx_real", obj[["handle"]], obj[["offset"]], as.numeric(j-1))[[1]]
-		df<-lapply(ofs, function(x){class(x)<-"MVL_OFFSET" ; return(mvl_read_object(obj, x, idx=list(as.numeric(i-1))))})
+			ofs<-.Call("read_vectors_idx2", obj[["handle"]], obj[["offset"]], j)[[1]]
+			
+		df<-lapply(ofs, function(x){class(x)<-"MVL_OFFSET" ; return(mvl_read_object(obj, x, idx=list(i)))})
+		
+#		df<-.Call("read_vectors_idx2", obj[["handle"]], ofs, i)
+		
 		names(df)<-n
 		class(df)<-"data.frame"
 		if(dim(df)[2]==1 && !is.null(drop) && drop)return(df[,1])
@@ -875,17 +953,17 @@ names.MVL_OBJECT<-function(x) {
 			}
 		return(df)
 		}
-	if(object_class %in% c("array", "matrix")) {
+	if(any(object_class %in% c("array", "matrix"))) {
 		od<-obj[["metadata"]][["dim"]]
 		if(is.null(od))od<-obj[["length"]]
 		
 		if(missing(i)) {
 			d<-od[1]
-			idx<-0:(od[1]-1)
+			idx<-1:(od[1])
 			} else {
 			if(is.logical(i))i<-which(i)
 			d<-length(i)
-			idx<-i-1
+			idx<-i
 			}
 		mult<-1
 		
@@ -909,7 +987,8 @@ names.MVL_OBJECT<-function(x) {
 		if(raw)
 			vec<-.Call("read_vectors_idx_raw_real", obj[["handle"]], obj[["offset"]], as.numeric(idx))[[1]]
 			else
-			vec<-.Call("read_vectors_idx_real", obj[["handle"]], obj[["offset"]], as.numeric(idx))[[1]]
+			vec<-.Call("read_vectors_idx_real", obj[["handle"]], obj[["offset"]], idx)[[1]]
+#			vec<-.Call("read_vectors_idx_real", obj[["handle"]], obj[["offset"]], as.numeric(idx))[[1]]
 		
 		if(is.null(drop) || drop==TRUE) {
 			d<-d[d!=1]
@@ -919,22 +998,24 @@ names.MVL_OBJECT<-function(x) {
 		return(vec)
 		}
 	if(...length()==0) {
-		if(is.logical(i)) {
-			i<-which(i)
-			}
+# 		if(is.logical(i)) {
+# 			i<-which(i)
+# 			}
 		if(is.factor(i))i<-as.character(i)
 		if(is.character(i)) {
 			if(is.null(obj$metadata$names))stop("Object has no names")
 			i<-which.max(obj$metadata$names==i)
 			}
-		if(is.numeric(i)) {
+#		if(is.numeric(i)) 
+			{
 			#print(i)
 			#print(L)
 #			vec<-mvl_read_object(obj, obj[["offset"]], idx=list(as.integer(i)), recurse=FALSE)
 			if(raw)
-				vec<-.Call("read_vectors_idx_raw", obj[["handle"]], obj[["offset"]], as.integer(i-1))[[1]]
+				vec<-.Call("read_vectors_idx_raw2", obj[["handle"]], obj[["offset"]], i)[[1]]
 				else
-				vec<-.Call("read_vectors_idx", obj[["handle"]], obj[["offset"]], as.integer(i-1))[[1]]
+				vec<-.Call("read_vectors_idx2", obj[["handle"]], obj[["offset"]], i)[[1]]
+#				vec<-.Call("read_vectors_idx", obj[["handle"]], obj[["offset"]], as.integer(i-1))[[1]]
 #			vec<-.Call("read_vectors", obj[["handle"]], obj[["offset"]])[[1]][i]
 
 			if(inherits(vec, "MVL_OFFSET") && length(vec)==1) {

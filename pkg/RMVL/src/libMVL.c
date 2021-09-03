@@ -314,13 +314,18 @@ while(i_start<index_count) {
 				mvl_rewrite_vector(ctx, LIBMVL_VECTOR_UINT8, char_offset, char_start, i, mvl_packed_list_get_entry(vec, data, indices[i_start]));
 				po[0]=char_start+char_offset+sizeof(LIBMVL_VECTOR_HEADER);				
 				mvl_rewrite_vector(ctx, mvl_vector_type(vec), offset, i_start+1, 1, po);
+				i_start++;
 				break;
 				}
 			N=0;
-			for(i=0;(i<char_buf_length) && (N<vec_buf_length) && (i_start+N<index_count);i+=mvl_packed_list_get_entry_bytelength(vec, indices[i_start+N])) {
-				N++;
+			for(i=0;(i<char_buf_length) && (N<vec_buf_length) && (i_start+N<index_count);i+=mvl_packed_list_get_entry_bytelength(vec, indices[i_start+N]), N++) {
 				}
+			if(i>char_buf_length)N--;
+// 			fprintf(stderr, "buffer plan N=%lld vec_buf_length=%lld i=%lld char_buf_length=%lld\n", N, vec_buf_length, i, char_buf_length);
 			//fprintf(stderr, "packed_list i=%lld N=%lld char_buf_len=%lld vec_buf_len=%lld index_count=%lld\n", i, N, char_buf_length, vec_buf_length, index_count);
+// 			if(N>vec_buf_length) {
+// 				fprintf(stderr, "*** INTERNAL ERROR: buffer overrun N=%lld vec_buf_length=%lld\n", N, vec_buf_length);
+// 				}
 			k=0;
 			for(i=0;i<N;i++) {
 				m=mvl_packed_list_get_entry_bytelength(vec, indices[i_start+i]);
@@ -328,6 +333,9 @@ while(i_start<index_count) {
 				k+=m;
 				po[i]=char_offset+char_start+sizeof(LIBMVL_VECTOR_HEADER)+k;
 				}
+// 			if(k>char_buf_length) {
+// 				fprintf(stderr, "*** INTERNAL ERROR: buffer overrun k=%lld char_buf_length=%lld N=%lld vec_buf_length=%lld\n", k, char_buf_length, N, vec_buf_length);
+// 				}
 			//fprintf(stderr, "packed_list i=%lld N=%lld k=%lld char_buf_len=%lld vec_buf_len=%lld\n", i, N, k, char_buf_length, vec_buf_length);
 			mvl_rewrite_vector(ctx, LIBMVL_VECTOR_UINT8, char_offset, char_start, k, char_buffer);
 			mvl_rewrite_vector(ctx, mvl_vector_type(vec), offset, i_start+1, N, po);
@@ -1003,41 +1011,103 @@ for(i=0;i<N;i++) {
 		case LIBMVL_VECTOR_CSTRING:
 		case LIBMVL_VECTOR_UINT8: {
 			unsigned char ad, bd;
+			if(mvl_vector_type(bvec)!=mvl_vector_type(avec))return 0;
 			ad=mvl_vector_data(avec).b[ai];
 			bd=mvl_vector_data(bvec).b[bi];
 			if(ad!=bd)return 0;
 			break;
 			}
 		case LIBMVL_VECTOR_INT32: {
-			int ad, bd;
+			int ad;
 			ad=mvl_vector_data(avec).i[ai];
-			bd=mvl_vector_data(bvec).i[bi];
-			if(ad!=bd)return 0;
-			break;
-			}
-		case LIBMVL_VECTOR_FLOAT: {
-			float ad, bd;
-			ad=mvl_vector_data(avec).f[ai];
-			bd=mvl_vector_data(bvec).f[bi];
-			if(ad!=bd)return 0;
+			switch(mvl_vector_type(bvec)) {
+				case LIBMVL_VECTOR_INT32: {
+					int bd;
+					bd=mvl_vector_data(bvec).i[bi];
+					if(ad!=bd)return 0;
+					break;
+					}
+				case LIBMVL_VECTOR_INT64: {
+					long long bd;
+					bd=mvl_vector_data(bvec).i64[bi];
+					if(ad!=bd)return 0;
+					break;
+					}
+				default:
+					return 0;
+					break;
+				}
 			break;
 			}
 		case LIBMVL_VECTOR_INT64: {
-			long long ad, bd;
+			long long ad;
 			ad=mvl_vector_data(avec).i64[ai];
-			bd=mvl_vector_data(bvec).i64[bi];
-			if(ad!=bd)return 0;
+			switch(mvl_vector_type(bvec)) {
+				case LIBMVL_VECTOR_INT32: {
+					int bd;
+					bd=mvl_vector_data(bvec).i[bi];
+					if(ad!=bd)return 0;
+					break;
+					}
+				case LIBMVL_VECTOR_INT64: {
+					long long bd;
+					bd=mvl_vector_data(bvec).i64[bi];
+					if(ad!=bd)return 0;
+					break;
+					}
+				default:
+					return 0;
+					break;
+				}
+			break;
+			}
+		case LIBMVL_VECTOR_FLOAT: {
+			float ad;
+			ad=mvl_vector_data(avec).f[ai];
+			switch(mvl_vector_type(bvec)) {
+				case LIBMVL_VECTOR_FLOAT: {
+					float bd;
+					bd=mvl_vector_data(bvec).f[bi];
+					if(ad!=bd)return 0;
+					break;
+					}
+				case LIBMVL_VECTOR_DOUBLE: {
+					double bd;
+					bd=mvl_vector_data(bvec).d[bi];
+					if((double)ad!=bd)return 0;
+					break;
+					}
+				default:
+					return 0;
+					break;
+				}
 			break;
 			}
 		case LIBMVL_VECTOR_DOUBLE: {
-			double ad, bd;
+			double ad;
 			ad=mvl_vector_data(avec).d[ai];
-			bd=mvl_vector_data(bvec).d[bi];
-			if(ad!=bd)return 0;
+			switch(mvl_vector_type(bvec)) {
+				case LIBMVL_VECTOR_FLOAT: {
+					double bd;
+					bd=mvl_vector_data(bvec).f[bi];
+					if(ad!=bd)return 0;
+					break;
+					}
+				case LIBMVL_VECTOR_DOUBLE: {
+					double bd;
+					bd=mvl_vector_data(bvec).d[bi];
+					if(ad!=bd)return 0;
+					break;
+					}
+				default:
+					return 0;
+					break;
+				}
 			break;
 			}
 		case LIBMVL_VECTOR_OFFSET64: {
 			LIBMVL_OFFSET64 ad, bd;
+			if(mvl_vector_type(bvec)!=mvl_vector_type(avec))return 0;
 			ad=mvl_vector_data(avec).offset[ai];
 			bd=mvl_vector_data(bvec).offset[bi];
 			if(ad!=bd)return 0;
@@ -1046,6 +1116,7 @@ for(i=0;i<N;i++) {
 		case LIBMVL_PACKED_LIST64: {
 			LIBMVL_OFFSET64 al, bl, nn;
 			const unsigned char *ad, *bd;
+			if(mvl_vector_type(bvec)!=mvl_vector_type(avec))return 0;
 			al=mvl_packed_list_get_entry_bytelength(avec, ai);
 			bl=mvl_packed_list_get_entry_bytelength(bvec, bi);
 			ad=mvl_packed_list_get_entry(avec, a->info->data[i], ai);
@@ -1256,7 +1327,7 @@ return 0;
  * 
  * This function return 0 on successful sort. If no vectors are supplies (vec_count==0) the indices are unchanged and the sort is considered successful.
  */
-int mvl_sort_indices(LIBMVL_OFFSET64 indices_count, LIBMVL_OFFSET64 *indices, LIBMVL_OFFSET64 vec_count, LIBMVL_VECTOR **vec, void **vec_data, int sort_function)
+int mvl_sort_indices1(LIBMVL_OFFSET64 indices_count, LIBMVL_OFFSET64 *indices, LIBMVL_OFFSET64 vec_count, LIBMVL_VECTOR **vec, void **vec_data, int sort_function)
 {
 MVL_SORT_UNIT *units;
 MVL_SORT_INFO info;
@@ -1679,7 +1750,7 @@ for(i=0;i<first_count;i++) {
 		su1.index=tmp[0];
 		while(l<=m) {
 			su2.index=tmp[l];
-			if((hash[tmp[0]]!=hash[tmp[l]] || !mvl_equals(&su1, &su2))) {
+			if(hash[tmp[0]]!=hash[tmp[l]] || !mvl_equals(&su1, &su2)) {
 				if(l<m) {
 					a=tmp[m];
 					tmp[m]=tmp[l];
