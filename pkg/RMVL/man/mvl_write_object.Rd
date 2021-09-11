@@ -21,3 +21,6 @@ an object of class MVL_OFFSET that describes an offset into this MVL file. MVL o
 \description{
 Write R object into MVL file
 }
+\seealso{
+\code{\link{mvl_indexed_copy}}, \code{\link{mvl_merge}}
+}

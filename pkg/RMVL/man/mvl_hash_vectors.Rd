@@ -18,3 +18,6 @@ hash values in numeric format, with 52 valid bits. Each value is uniform between
 This function is passed a list of MVL vectors which are interpreted in data.frame fashion. For each row, i.e. set of vector values with the same index
 we compute a hash value. Identical rows produce identical hash values. The hash values have good entropy and can be used to map row values into random numbers.
 }
+\seealso{
+\code{\link{mvl_order_vectors}}, \code{\link{mvl_find_matches}}, \code{\link{mvl_group}}, \code{\link{mvl_find_matches}}, \code{\link{mvl_indexed_copy}}, \code{\link{mvl_merge}}, \code{\link{mvl_write_hash_vectors}}
+}

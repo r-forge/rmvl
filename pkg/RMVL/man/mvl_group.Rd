@@ -19,3 +19,6 @@ This function groups identical rows. The result is formatted as two vectors \cod
 Vector \code{index} contains stretches of indices with identical rows. Vector \code{stretch_index} describes stretches as stretch_index[i] to stretch_index[i+1]-1
 This allows fast iteration over indices without creating excessive numbers of R objects when group sizes are small.
 }
+\seealso{
+\code{\link{mvl_hash_vectors}}, \code{\link{mvl_find_matches}}, \code{\link{mvl_order_vectors}}, \code{\link{mvl_find_matches}}, \code{\link{mvl_indexed_copy}}, \code{\link{mvl_merge}}
+}

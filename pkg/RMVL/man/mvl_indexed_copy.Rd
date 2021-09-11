@@ -17,6 +17,12 @@ mvl_indexed_copy(MVLHANDLE, x, indices, name = NULL, only.columns = NULL)
 
 \item{only.columns}{if x is MVL_OBJECT with class data.frame copy only columns specified in this character or integer vector}
 }
+\value{
+an object of class MVL_OFFSET that describes an offset into this MVL file. MVL offsets are vectors and can be concatenated. They can be written to MVL file directly, or as part of another object such as list.
+}
 \description{
 Index copy vector
+}
+\seealso{
+\code{\link{mvl_hash_vectors}}, \code{\link{mvl_find_matches}}, \code{\link{mvl_group}}, \code{\link{mvl_find_matches}}, \code{\link{mvl_order_vectors}}, \code{\link{mvl_merge}}, \code{\link{mvl_write_object}}, \code{\link{mvl_fused_write_objects}}
 }

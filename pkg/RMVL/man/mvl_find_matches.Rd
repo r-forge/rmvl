@@ -23,3 +23,6 @@ This function is passed two lists of MVL vectors which are interpreted in data.f
 The indices of pairwise matches are returned in order of the first argument ("index1" and "index2"). 
 In addition we return indices describing stretches with "index1" value constant ( stretch_index[i] to stretch_index[i+1]-1)
 }
+\seealso{
+\code{\link{mvl_hash_vectors}}, \code{\link{mvl_order_vectors}}, \code{\link{mvl_group}}, \code{\link{mvl_find_matches}}, \code{\link{mvl_indexed_copy}}, \code{\link{mvl_merge}}
+}

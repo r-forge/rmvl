@@ -26,3 +26,6 @@ sorted indices
 \description{
 This function is similar to R  order() function, but operates on MVL_OBJECTS.
 }
+\seealso{
+\code{\link{mvl_hash_vectors}}, \code{\link{mvl_find_matches}}, \code{\link{mvl_group}}, \code{\link{mvl_find_matches}}, \code{\link{mvl_indexed_copy}}, \code{\link{mvl_merge}}
+}

@@ -38,6 +38,12 @@ mvl_merge(
 
 \item{only.columns.y}{only copy these columns from df2}
 }
+\value{
+an object of class MVL_OFFSET that describes an offset into this MVL file. MVL offsets are vectors and can be concatenated. They can be written to MVL file directly, or as part of another object such as list.
+}
 \description{
 Merge two MVL data frames and write the result
+}
+\seealso{
+\code{\link{mvl_hash_vectors}}, \code{\link{mvl_find_matches}}, \code{\link{mvl_group}}, \code{\link{mvl_find_matches}}, \code{\link{mvl_indexed_copy}}, \code{\link{mvl_order_vectors}}, \code{\link{mvl_fused_write_objects}}
 }

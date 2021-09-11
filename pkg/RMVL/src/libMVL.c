@@ -1713,7 +1713,7 @@ return(0);
 }
 
 /* This functions transforms HASH_MAP into a list of groups. 
- * After calling hm->hash_map is invalid, but hm->first and hm->next describe exactly identical rows 
+ * After calling hm->hash_map becomes invalid, but hm->first and hm->next describe exactly identical rows 
  */
 void mvl_find_groups(LIBMVL_OFFSET64 indices_count, LIBMVL_OFFSET64 *indices, LIBMVL_OFFSET64 vec_count, LIBMVL_VECTOR **vec, void **vec_data, HASH_MAP *hm)
 {
@@ -1747,9 +1747,9 @@ for(i=0;i<first_count;i++) {
 	while(j>1) {
 		m=j-1;
 		l=1;
-		su1.index=tmp[0];
+		su1.index=indices[tmp[0]];
 		while(l<=m) {
-			su2.index=tmp[l];
+			su2.index=indices[tmp[l]];
 			if(hash[tmp[0]]!=hash[tmp[l]] || !mvl_equals(&su1, &su2)) {
 				if(l<m) {
 					a=tmp[m];
