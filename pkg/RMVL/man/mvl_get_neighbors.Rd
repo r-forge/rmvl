@@ -23,7 +23,8 @@ For each row, the function returns a list of indices describing rows that are cl
 Mtmp<-mvl_open("tmp_a.mvl", append=TRUE, create=TRUE)
 mvl_write_object(Mtmp, data.frame(x=runif(100), y=1:100), "df1")
 Mtmp<-mvl_remap(Mtmp)
-mvl_write_spatial_groups(Mtmp, list(Mtmp$df1[,"x",ref=TRUE], Mtmp$df1[,"y", ref=TRUE]), c(2, 3), "df1_sp_groups")
+mvl_write_spatial_groups(Mtmp, list(Mtmp$df1[,"x",ref=TRUE], Mtmp$df1[,"y", ref=TRUE]),
+                                                              c(2, 3), "df1_sp_groups")
 Mtmp<-mvl_remap(Mtmp)
 print(mvl_get_neighbors(Mtmp["df1_sp_groups", ref=TRUE], list(c(0.5, 0.6), c(2, 3))))
 }

@@ -28,6 +28,7 @@ Mtmp<-mvl_open("tmp_a.mvl", append=TRUE, create=TRUE)
 mvl_write_object(Mtmp, runif(100), "vec1")
 mvl_write_object(Mtmp, runif(100), "vec2")
 Mtmp<-mvl_remap(Mtmp)
-mvl_fused_write_objects(Mtmp, list(Mtmp["vec1", ref=TRUE], Mtmp["vec2", ref=TRUE], runif(3)), name="vec3")
+mvl_fused_write_objects(Mtmp, list(Mtmp["vec1", ref=TRUE], Mtmp["vec2", ref=TRUE], runif(3)),
+                                                                                  name="vec3")
 }
 }
