@@ -17,6 +17,16 @@ a list of results of function \code{fn}
 \description{
 Iteratively call function \code{fn} over index stretches previously computed with \code{mvl_group}
 }
+\examples{
+\dontrun{
+Mtmp<-mvl_open("tmp_a.mvl", append=TRUE, create=TRUE)
+mvl_write_object(Mtmp, data.frame(x=rep(c("a", "b"), 50), y=(1:100)/5), "df1")
+Mtmp<-mvl_remap(Mtmp)
+df1<-Mtmp$df1
+G<-mvl_group(list(df1[,"x",ref=TRUE], df1[,"y", ref=TRUE]))
+mvl_group_lapply(G, function(idx) { return(sum(df1[idx, "y"]))})
+}
+}
 \seealso{
 \code{\link{mvl_group}}
 }

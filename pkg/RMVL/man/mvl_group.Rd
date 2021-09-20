@@ -19,6 +19,16 @@ This function groups identical rows. The result is formatted as two vectors \cod
 Vector \code{index} contains stretches of indices with identical rows. Vector \code{stretch_index} describes stretches as stretch_index[i] to stretch_index[i+1]-1
 This allows fast iteration over indices without creating excessive numbers of R objects when group sizes are small.
 }
+\examples{
+\dontrun{
+Mtmp<-mvl_open("tmp_a.mvl", append=TRUE, create=TRUE)
+mvl_write_object(Mtmp, data.frame(x=rep(c("a", "b"), 50), y=(1:100)/5), "df1")
+Mtmp<-mvl_remap(Mtmp)
+df1<-Mtmp["df1", ref=TRUE]
+G<-mvl_group(list(df1[,"x",ref=TRUE], df1[,"y", ref=TRUE]))
+mvl_group_lapply(G, function(idx) { return(sum(df1[idx, "y"]))})
+}
+}
 \seealso{
 \code{\link{mvl_hash_vectors}}, \code{\link{mvl_find_matches}}, \code{\link{mvl_order_vectors}}, \code{\link{mvl_find_matches}}, \code{\link{mvl_indexed_copy}}, \code{\link{mvl_merge}}
 }

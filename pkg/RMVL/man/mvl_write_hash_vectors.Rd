@@ -21,6 +21,16 @@ This function is passed a list of MVL vectors which are interpreted in data.fram
 we compute a 64-bit hash value. Identical rows produce identical hash values. The hash values are written into 64-bit integer vector. 
 This function is meant for use with data that is too large to handle comfortably.
 }
+\examples{
+\dontrun{
+Mtmp<-mvl_open("tmp_a.mvl", append=TRUE, create=TRUE)
+mvl_write_object(Mtmp, runif(100), "vec1")
+Mtmp<-mvl_remap(Mtmp)
+mvl_write_hash_vectors(Mtmp, list(Mtmp["vec1", ref=TRUE]), "vec1_hash")
+Mtmp<-mvl_remap(Mtmp)
+print(length(Mtmp["vec1_hash"]))
+}
+}
 \seealso{
 \code{\link{mvl_order_vectors}}, \code{\link{mvl_find_matches}}, \code{\link{mvl_group}}, \code{\link{mvl_find_matches}}, \code{\link{mvl_indexed_copy}}, \code{\link{mvl_merge}}, \code{\link{mvl_hash_vectors}}
 }

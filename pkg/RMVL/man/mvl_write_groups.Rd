@@ -22,6 +22,16 @@ are split into groups so that identical rows are guaranteed to belong to the sam
 This function is convenient to use as a way to partition very large datasets before applying \code{mvl_group} or \code{mvl_find_matches}. 
 The groups can be obtained by using \code{mvl_get_groups}
 }
+\examples{
+\dontrun{
+Mtmp<-mvl_open("tmp_a.mvl", append=TRUE, create=TRUE)
+mvl_write_object(Mtmp, data.frame(x=runif(100), y=1:100), "df1")
+Mtmp<-mvl_remap(Mtmp)
+mvl_write_groups(Mtmp, list(Mtmp$df1[,"x",ref=TRUE], Mtmp$df1[,"y", ref=TRUE]), "df1_groups")
+Mtmp<-mvl_remap(Mtmp)
+print(mvl_get_groups(Mtmp["df1_groups", ref=TRUE]["prev", ref=TRUE], Mtmp$df1_groups$first[1:5]))
+}
+}
 \seealso{
 \code{\link{mvl_order_vectors}}, \code{\link{mvl_find_matches}}, \code{\link{mvl_group}}, \code{\link{mvl_find_matches}}, \code{\link{mvl_indexed_copy}}, \code{\link{mvl_merge}}, \code{\link{mvl_hash_vectors}}, \code{\link{mvl_get_groups}}
 }

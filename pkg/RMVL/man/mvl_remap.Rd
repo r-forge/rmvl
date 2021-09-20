@@ -22,6 +22,14 @@ MVL_OBJECT's previously obtained from this handle continue to be valid.
 \details{
 \code{mvl_open} returns a handle with updated directory.
 }
+\examples{
+\dontrun{
+Mtmp<-mvl_open("tmp_a.mvl", append=TRUE, create=TRUE)
+mvl_write_object(Mtmp, runif(100), "vec1")
+Mtmp<-mvl_remap(Mtmp)
+print(Mtmp["vec1"])
+}
+}
 \seealso{
 \code{\link{mvl_open}}, \code{\link{mvl_close}}
 }

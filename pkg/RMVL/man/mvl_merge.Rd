@@ -44,6 +44,17 @@ an object of class MVL_OFFSET that describes an offset into this MVL file. MVL o
 \description{
 Merge two MVL data frames and write the result
 }
+\examples{
+\dontrun{
+Mtmp<-mvl_open("tmp_a.mvl", append=TRUE, create=TRUE)
+mvl_write_object(Mtmp, data.frame(x=rep(c("a", "b"), 50), y=1:100), "df1")
+mvl_write_object(Mtmp, data.frame(x=rep(c("b", "c"), 50), y=runif(100), z=21:120), "df2")
+Mtmp<-mvl_remap(Mtmp)
+mvl_merge(Mtmp, Mtmp$df1, Mtmp$df2, by.x="y", by.y="z", only.columns.y=c("x"), name="df_merged")
+Mtmp<-mvl_remap(Mtmp)
+print(Mtmp$df_merged[1:10,])
+}
+}
 \seealso{
 \code{\link{mvl_hash_vectors}}, \code{\link{mvl_find_matches}}, \code{\link{mvl_group}}, \code{\link{mvl_find_matches}}, \code{\link{mvl_indexed_copy}}, \code{\link{mvl_order_vectors}}, \code{\link{mvl_fused_write_objects}}
 }

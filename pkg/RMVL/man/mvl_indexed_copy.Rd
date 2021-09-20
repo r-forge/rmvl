@@ -23,6 +23,17 @@ an object of class MVL_OFFSET that describes an offset into this MVL file. MVL o
 \description{
 Index copy vector
 }
+\examples{
+\dontrun{
+Mtmp<-mvl_open("tmp_a.mvl", append=TRUE, create=TRUE)
+mvl_write_object(Mtmp, runif(100), "vec1")
+Mtmp<-mvl_remap(Mtmp)
+permutation1<-mvl_order_vectors(list(Mtmp["vec1", ref=TRUE]))
+mvl_indexed_copy(Mtmp, Mtmp["vec1", ref=TRUE], permutation1, name="vec1_sorted")
+Mtmp<-mvl_remap(Mtmp)
+print(Mtmp$vec1_sorted)
+}
+}
 \seealso{
 \code{\link{mvl_hash_vectors}}, \code{\link{mvl_find_matches}}, \code{\link{mvl_group}}, \code{\link{mvl_find_matches}}, \code{\link{mvl_order_vectors}}, \code{\link{mvl_merge}}, \code{\link{mvl_write_object}}, \code{\link{mvl_fused_write_objects}}
 }

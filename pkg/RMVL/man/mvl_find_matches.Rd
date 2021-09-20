@@ -23,6 +23,15 @@ This function is passed two lists of MVL vectors which are interpreted in data.f
 The indices of pairwise matches are returned in order of the first argument ("index1" and "index2"). 
 In addition we return indices describing stretches with "index1" value constant ( stretch_index[i] to stretch_index[i+1]-1)
 }
+\examples{
+\dontrun{
+Mtmp<-mvl_open("tmp_a.mvl", append=TRUE, create=TRUE)
+mvl_write_object(Mtmp, data.frame(x=rep(c("a", "b"), 50), y=1:100), "df1")
+mvl_write_object(Mtmp, data.frame(x=rep(c("b", "c"), 50), y=21:120), "df2")
+Mtmp<-mvl_remap(Mtmp)
+L<-mvl_find_matches(list(Mtmp$df1[,"x",ref=TRUE], Mtmp$df1[,"y", ref=TRUE]), list(Mtmp$df2[,"x",ref=TRUE], Mtmp$df2[,"y", ref=TRUE]))
+}
+}
 \seealso{
 \code{\link{mvl_hash_vectors}}, \code{\link{mvl_order_vectors}}, \code{\link{mvl_group}}, \code{\link{mvl_find_matches}}, \code{\link{mvl_indexed_copy}}, \code{\link{mvl_merge}}
 }

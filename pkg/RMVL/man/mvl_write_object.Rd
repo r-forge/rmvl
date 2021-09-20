@@ -21,6 +21,19 @@ an object of class MVL_OFFSET that describes an offset into this MVL file. MVL o
 \description{
 Write R object into MVL file
 }
+\examples{
+\dontrun{
+Mtmp<-mvl_open("tmp_a.mvl", append=TRUE, create=TRUE)
+mvl_write_object(Mtmp, runif(100), "vec1")
+L<-list()
+L[["x"]]<-mvl_write_object(Mtmp, 1:5)
+L[["y"]]<-mvl_write_object(Mtmp, c("a", "b"))
+L[["df"]]<-mvl_write_object(Mtmp, data.frame(x=1:100, z=runif(100)))
+mvl_write_object(Mtmp, L, "L")
+Mtmp<-mvl_remap(Mtmp)
+print(Mtmp$L)
+}
+}
 \seealso{
 \code{\link{mvl_indexed_copy}}, \code{\link{mvl_merge}}
 }

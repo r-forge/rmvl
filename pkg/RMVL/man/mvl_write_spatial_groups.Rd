@@ -23,6 +23,16 @@ This function is passed a list of MVL vectors which are interpreted in data.fram
 are split into groups so that identical rows are guaranteed to belong to the same group. This is done using partition into equal sized bins.
 This function is meant for constructing spatial indexes.
 }
+\examples{
+\dontrun{
+Mtmp<-mvl_open("tmp_a.mvl", append=TRUE, create=TRUE)
+mvl_write_object(Mtmp, data.frame(x=runif(100), y=1:100), "df1")
+Mtmp<-mvl_remap(Mtmp)
+mvl_write_spatial_groups(Mtmp, list(Mtmp$df1[,"x",ref=TRUE], Mtmp$df1[,"y", ref=TRUE]), c(2, 3), "df1_sp_groups")
+Mtmp<-mvl_remap(Mtmp)
+print(mvl_get_neighbors(Mtmp["df1_sp_groups", ref=TRUE], list(c(0.5, 0.6), c(2, 3))))
+}
+}
 \seealso{
 \code{\link{mvl_order_vectors}}, \code{\link{mvl_find_matches}}, \code{\link{mvl_group}}, \code{\link{mvl_find_matches}}, \code{\link{mvl_indexed_copy}}, \code{\link{mvl_merge}}, \code{\link{mvl_hash_vectors}}, \code{\link{mvl_get_groups}}
 }

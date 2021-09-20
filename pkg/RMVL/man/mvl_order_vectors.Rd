@@ -26,6 +26,14 @@ sorted indices
 \description{
 This function is similar to R  order() function, but operates on MVL_OBJECTS.
 }
+\examples{
+\dontrun{
+Mtmp<-mvl_open("tmp_a.mvl", append=TRUE, create=TRUE)
+mvl_write_object(Mtmp, runif(100), "vec1")
+Mtmp<-mvl_remap(Mtmp)
+permutation1<-mvl_order_vectors(list(Mtmp["vec1", ref=TRUE]))
+}
+}
 \seealso{
 \code{\link{mvl_hash_vectors}}, \code{\link{mvl_find_matches}}, \code{\link{mvl_group}}, \code{\link{mvl_find_matches}}, \code{\link{mvl_indexed_copy}}, \code{\link{mvl_merge}}
 }
