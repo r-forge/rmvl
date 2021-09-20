@@ -2,7 +2,7 @@
 % Please edit documentation in R/RMVL.R
 \name{mvl_get_groups}
 \alias{mvl_get_groups}
-\title{Retrieve indices belong to one or more groups}
+\title{Retrieve indices belonging to one or more groups}
 \usage{
 mvl_get_groups(prev, first_indices)
 }

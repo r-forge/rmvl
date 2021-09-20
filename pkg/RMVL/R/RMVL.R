@@ -242,7 +242,7 @@ mvl_write_hash_vectors<-function(MVLHANDLE, L, name=NULL) {
 	return(invisible(offset))
 	}
 
-#' Write hash values for each row
+#' Write group information for each row
 #'
 #' This function is passed a list of MVL vectors which are interpreted in data.frame fashion. These rows 
 #' are split into groups so that identical rows are guaranteed to belong to the same group. This is done internally based on 20-bit hash values.
@@ -264,7 +264,7 @@ mvl_write_groups<-function(MVLHANDLE, L, name=NULL) {
 	return(invisible(offset))
 	}
 
-#' Retrieve indices belong to one or more groups
+#' Retrieve indices belonging to one or more groups
 #'
 #' This function is passed the \code{prev} vector computed by \code{mvl_write_groups} and one or more indices from the \code{first} vector.
 #'
@@ -277,6 +277,64 @@ mvl_write_groups<-function(MVLHANDLE, L, name=NULL) {
 #'
 mvl_get_groups<-function(prev, first_indices) {
 	return(.Call("get_groups", prev, first_indices))
+	}
+
+#' Write spatial group information for each row
+#'
+#' This function is passed a list of MVL vectors which are interpreted in data.frame fashion. These rows 
+#' are split into groups so that identical rows are guaranteed to belong to the same group. This is done using partition into equal sized bins.
+#' This function is meant for constructing spatial indexes.
+#'
+#' @param MVLHANDLE a handle to MVL file produced by mvl_open()
+#' @param L  list of vector like MVL_OBJECTs 
+#' @param bits a vector of bit values to use for each member of L
+#' @param name if specified add a named entry to MVL file directory
+#' @return an object of class MVL_OFFSET that describes an offset into this MVL file. MVL offsets are vectors and can be concatenated. They can be written to MVL file directly, or as part of another object such as list.
+#' @seealso \code{\link{mvl_order_vectors}}, \code{\link{mvl_find_matches}}, \code{\link{mvl_group}}, \code{\link{mvl_find_matches}}, \code{\link{mvl_indexed_copy}}, \code{\link{mvl_merge}}, \code{\link{mvl_hash_vectors}}, \code{\link{mvl_get_groups}}
+#'  
+#' @export
+#'
+mvl_write_spatial_groups<-function(MVLHANDLE, L, bits, name=NULL) {
+	if(!inherits(MVLHANDLE, "MVL")) stop("not an MVL object")
+	if(length(bits)==1)bits<-rep(bits, length(L))
+	offset<-.Call("write_spatial_groups", MVLHANDLE[["handle"]], L, as.integer(bits))
+	if(!is.null(name))mvl_add_directory_entries(MVLHANDLE, name, offset)	
+	return(invisible(offset))
+	}
+
+#' Retrieve indices of nearby rows.
+#'
+#' This function is passed the index computed by \code{mvl_write_spatial_groups} and a list of vectors, which rows are interpreted as points.
+#' For each row, the function returns a list of indices describing rows that are close to it.
+#'
+#' @param spatial_index  MVL_OBJECT computed by \code{mvl_write_spatial_groups} 
+#' @param data_list  a list of vectors of equal length. They can be MVL_OBJECTs or R vectors. 
+#' @return a list of vectors of indices
+#' @seealso \code{\link{mvl_write_spatial_groups}}
+#'  
+#' @export
+#'
+mvl_get_neighbors<-function(spatial_index, data_list) {
+	return(.Call("get_neighbors", spatial_index, data_list))
+	}
+	
+	
+#' Apply function to indices of nearby rows
+#'
+#' This function is passed the index computed by \code{mvl_write_spatial_groups} and a list of vectors, which rows are interpreted as points.
+#' For each row, we call the function \code{fn(i, idx)}, where \code{i} gives the index of query row, and \code{idx} gives the indices of nearby rows.
+#'
+#' @param spatial_index  MVL_OBJECT computed by \code{mvl_write_spatial_groups} 
+#' @param data_list  a list of vectors of equal length. They can be MVL_OBJECTs or R vectors. 
+#' @param fn a function of one argument - list of indices
+#' @return a list of results of function \code{fn}
+#' @seealso \code{\link{mvl_group}}
+#'  
+#' @export
+#'
+mvl_neighbors_lapply<-function(spatial_index, data_list, fn) {
+	L<-.Call("neighbors_lapply", spatial_index, data_list, fn, new.env())
+	return(L)
 	}
 	
 #' Find matching rows
@@ -317,6 +375,22 @@ mvl_find_matches<-function(L1, L2, indices1=NULL, indices2=NULL) {
 mvl_group<-function(L, indices=NULL) {
 	L<-.Call("group_vectors", L, indices)
 	names(L)<-c("stretch_index", "index")
+	return(L) 
+	}
+
+#' Apply function to index stretches
+#'
+#' Iteratively call function \code{fn} over index stretches previously computed with \code{mvl_group}
+#'
+#' @param G a list of groups and group stretches produced by \code{mvl_group}
+#' @param fn a function of one argument - list of indices
+#' @return a list of results of function \code{fn}
+#' @seealso \code{\link{mvl_group}}
+#'  
+#' @export
+#'
+mvl_group_lapply<-function(G, fn) {
+	L<-.Call("group_lapply", G$stretch_index[], G$index[], fn, new.env())
 	return(L) 
 	}
 	
@@ -732,7 +806,7 @@ mvl_read_object<-function(MVLHANDLE, offset, idx=NULL, recurse=FALSE, raw=FALSE,
 		if(raw)
 			vec<-.Call("read_vectors_idx_raw2", MVLHANDLE[["handle"]], offset, idx[[1]])[[1]]
 			else
-			vec<-.Call("read_vectors_idx2", MVLHANDLE[["handle"]], offset, idx[[1]])[[1]]
+			vec<-.Call("read_vectors_idx3", MVLHANDLE[["handle"]], offset, idx[[1]])[[1]]
 #			vec<-.Call("read_vectors_idx_real", MVLHANDLE[["handle"]], offset, idx[[1]])[[1]]
 		}
 	if(inherits(vec, "MVL_OFFSET")) {
@@ -985,7 +1059,6 @@ names.MVL_OBJECT<-function(x) {
 		}
 	#cat("obj class ", obj[["metadata"]][["class"]], "\n")
 	object_class<-obj[["metadata"]][["class"]]
-	if(is.null(object_class))object_class<-"NULL"
 	if(any(object_class=="data.frame")) {
 		if(...length()>1)stop("Object", obj, "has only two dimensions")
 		n<-obj[["metadata"]][["names"]]
@@ -1007,7 +1080,7 @@ names.MVL_OBJECT<-function(x) {
 			}
 		if(missing(i)) {
 			if(length(j)==1 && drop) {
-				ofs<-.Call("read_vectors_idx2", obj[["handle"]], obj[["offset"]], j)[[1]]
+				ofs<-.Call("read_vectors_idx3", obj[["handle"]], obj[["offset"]], j)[[1]]
 				metadata_offset<-.Call("read_metadata", obj[["handle"]], ofs)
 				metadata<-mvl_read_metadata(obj, metadata_offset)
 
@@ -1029,7 +1102,7 @@ names.MVL_OBJECT<-function(x) {
 		if(raw)
 			ofs<-.Call("read_vectors_idx_raw2", obj[["handle"]], obj[["offset"]], j)[[1]]
 			else
-			ofs<-.Call("read_vectors_idx2", obj[["handle"]], obj[["offset"]], j)[[1]]
+			ofs<-.Call("read_vectors_idx3", obj[["handle"]], obj[["offset"]], j)[[1]]
 			
 		df<-lapply(ofs, function(x){class(x)<-"MVL_OFFSET" ; return(mvl_read_object(obj, x, idx=list(i)))})
 		
@@ -1094,51 +1167,63 @@ names.MVL_OBJECT<-function(x) {
 			dim(vec)<-d
 		return(vec)
 		}
-	if(...length()==0) {
-# 		if(is.logical(i)) {
-# 			i<-which(i)
-# 			}
-		if(is.factor(i))i<-as.character(i)
-		if(is.character(i)) {
-			if(is.null(obj$metadata$names))stop("Object has no names")
-			i<-which.max(obj$metadata$names==i)
-			}
-#		if(is.numeric(i)) 
-			{
-			#print(i)
-			#print(L)
-#			vec<-mvl_read_object(obj, obj[["offset"]], idx=list(as.integer(i)), recurse=FALSE)
-			if(raw)
-				vec<-.Call("read_vectors_idx_raw2", obj[["handle"]], obj[["offset"]], i)[[1]]
-				else
-				vec<-.Call("read_vectors_idx2", obj[["handle"]], obj[["offset"]], i)[[1]]
-#				vec<-.Call("read_vectors_idx", obj[["handle"]], obj[["offset"]], as.integer(i-1))[[1]]
-#			vec<-.Call("read_vectors", obj[["handle"]], obj[["offset"]])[[1]][i]
+	if(is.null(object_class) || any(object_class=="list")) {
+		if(...length()==0) {
+	# 		if(is.logical(i)) {
+	# 			i<-which(i)
+	# 			}
+			if(is.factor(i))i<-as.character(i)
+			if(is.character(i)) {
+				if(is.null(obj$metadata$names))stop("Object has no names")
+				i<-which.max(obj$metadata$names==i)
+				}
+	#		if(is.numeric(i)) 
+				{
+				#print(i)
+				#print(L)
+	#			vec<-mvl_read_object(obj, obj[["offset"]], idx=list(as.integer(i)), recurse=FALSE)
+				if(raw)
+					vec<-.Call("read_vectors_idx_raw2", obj[["handle"]], obj[["offset"]], i)[[1]]
+					else
+					vec<-.Call("read_vectors_idx3", obj[["handle"]], obj[["offset"]], i)[[1]]
+	#				vec<-.Call("read_vectors_idx", obj[["handle"]], obj[["offset"]], as.integer(i-1))[[1]]
+	#			vec<-.Call("read_vectors", obj[["handle"]], obj[["offset"]])[[1]][i]
 
-			if(inherits(vec, "MVL_OFFSET") && length(vec)==1) {
-				vec<-mvl_read_object(obj, vec, recurse=FALSE)
-				} else {
-				#metadata_offset<-.Call("read_metadata", obj[["handle"]], obj[["offset"]])
-				#metadata<-mvl_read_metadata(obj, metadata_offset)
-				#print(metadata)
-# 				if(0 && any(metadata[["MVL_LAYOUT"]]=="R")) {
-# 					cl<-metadata[["class"]]
-# 					if(cl!="data.frame" && !is.null(metadata[["dim"]]))dim(vec)<-metadata[["dim"]]
-# 					if(cl=="factor" || cl=="character") {
-# 						vec<-mvl_flatten_string(vec)
-# 						if(cl=="factor")vec<-as.factor(vec)
-# 						}
-# 						class(vec)<-cl
-# 					if(!is.null(metadata[["names"]]))names(vec)<-mvl_flatten_string(metadata[["names"]])
-# 					if(!is.null(metadata[["rownames"]]))rownames(vec)<-mvl_flatten_string(metadata[["rownames"]])
-# 					}				
+				if(inherits(vec, "MVL_OFFSET") && length(vec)==1) {
+					if(ref) {
+						metadata_offset<-.Call("read_metadata", obj[["handle"]], vec)
+						
+						L<-list(handle=obj[["handle"]], offset=vec, length=.Call("read_lengths", obj[["handle"]], vec), type=.Call("read_types", obj[["handle"]], vec),metadata_offset=metadata_offset)
+						L[["metadata"]]<-mvl_read_metadata(obj, metadata_offset)
+						class(L)<-"MVL_OBJECT"
+						vec<-L
+						} else {
+						vec<-mvl_read_object(obj, vec, recurse=FALSE, ref=ref)
+						}
+					} else {
+					#metadata_offset<-.Call("read_metadata", obj[["handle"]], obj[["offset"]])
+					#metadata<-mvl_read_metadata(obj, metadata_offset)
+					#print(metadata)
+	# 				if(0 && any(metadata[["MVL_LAYOUT"]]=="R")) {
+	# 					cl<-metadata[["class"]]
+	# 					if(cl!="data.frame" && !is.null(metadata[["dim"]]))dim(vec)<-metadata[["dim"]]
+	# 					if(cl=="factor" || cl=="character") {
+	# 						vec<-mvl_flatten_string(vec)
+	# 						if(cl=="factor")vec<-as.factor(vec)
+	# 						}
+	# 						class(vec)<-cl
+	# 					if(!is.null(metadata[["names"]]))names(vec)<-mvl_flatten_string(metadata[["names"]])
+	# 					if(!is.null(metadata[["rownames"]]))rownames(vec)<-mvl_flatten_string(metadata[["rownames"]])
+	# 					}				
+					}
+				if(inherits(vec, "MVL_OFFSET") && recurse) {
+					vec<-lapply(vec, function(x) {class(x)<-"MVL_OFFSET" ; return(mvl_read_object(obj, x, recurse=recurse, ref=ref, raw=raw)) })
+					}
+				return(vec)
 				}
-			if(inherits(vec, "MVL_OFFSET") && recurse) {
-				vec<-lapply(vec, function(x) {class(x)<-"MVL_OFFSET" ; return(mvl_read_object(obj, x, recurse=recurse, raw=raw)) })
-				}
-			return(vec)
+			} else {
 			}
-		} else {
+		stop("Cannot process ", obj)
 		}
 	stop("Cannot process ", obj)
 	}
