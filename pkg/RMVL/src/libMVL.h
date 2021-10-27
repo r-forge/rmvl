@@ -121,14 +121,15 @@ typedef struct {
 	LIBMVL_OFFSET64 metadata;
 	} LIBMVL_VECTOR_HEADER;
 	
-	
 #ifndef MVL_STATIC_MEMBERS
 #ifdef __SANITIZE_ADDRESS__
 #define MVL_STATIC_MEMBERS 0
+#warning "Address sanitizer active, using C11 definition of LIBMVL_VECTOR"
 #else
 #ifdef __clang__
 #if __has_feature(address_sanitizer)
 #define MVL_STATIC_MEMBERS 0
+#warning "Address sanitizer active, using C11 definition of LIBMVL_VECTOR"
 #else
 #define MVL_STATIC_MEMBERS 1
 #endif
@@ -164,8 +165,7 @@ typedef struct {
  * to describe variable size payloads.
  */
 	
-typedef struct {
-	union {
+typedef union {
 		struct {
 		LIBMVL_VECTOR_HEADER header;
 		unsigned char b[];
@@ -189,7 +189,6 @@ typedef struct {
 		struct {
 		LIBMVL_VECTOR_HEADER header5;
 		LIBMVL_OFFSET64 offset[];
-		};
 		};
 	} LIBMVL_VECTOR;
 #endif
@@ -258,9 +257,12 @@ typedef struct {
 #define LIBMVL_ERR_CANNOT_SEEK		-15
 #define LIBMVL_ERR_INVALID_PARAMETER	-16
 #define LIBMVL_ERR_INVALID_LENGTH	-17
+#define LIBMVL_ERR_INVALID_EXTENT_INDEX	-18
 	
 LIBMVL_CONTEXT *mvl_create_context(void);
 void mvl_free_context(LIBMVL_CONTEXT *ctx);
+
+const char * mvl_strerror(LIBMVL_CONTEXT *ctx);
 
 /*! @brief Use this constant to specify that no metadata should be written 
  */
@@ -271,10 +273,10 @@ void mvl_free_context(LIBMVL_CONTEXT *ctx);
 #define LIBMVL_NULL_OFFSET 	0
 
 
-LIBMVL_OFFSET64 mvl_write_vector(LIBMVL_CONTEXT *ctx, int type, long length, const void *data, LIBMVL_OFFSET64 metadata);
+LIBMVL_OFFSET64 mvl_write_vector(LIBMVL_CONTEXT *ctx, int type, LIBMVL_OFFSET64 length, const void *data, LIBMVL_OFFSET64 metadata);
 
 /* This is identical to mvl_write_vector() except that it allows to reserve space for more data than is supplied. */
-LIBMVL_OFFSET64 mvl_start_write_vector(LIBMVL_CONTEXT *ctx, int type, long expected_length, long length, const void *data, LIBMVL_OFFSET64 metadata);
+LIBMVL_OFFSET64 mvl_start_write_vector(LIBMVL_CONTEXT *ctx, int type, LIBMVL_OFFSET64 expected_length, LIBMVL_OFFSET64 length, const void *data, LIBMVL_OFFSET64 metadata);
 /* Rewrite data in already written vector with offset base_offset */
 /* In particular this allows vectors to be built up in pieces, by calling mvl_start_write_vector first */
 void mvl_rewrite_vector(LIBMVL_CONTEXT *ctx, int type, LIBMVL_OFFSET64 base_offset, LIBMVL_OFFSET64 idx, long length, const void *data);
@@ -389,6 +391,37 @@ void mvl_write_postamble(LIBMVL_CONTEXT *ctx);
 #define mvl_vector_data(data)   (*(((LIBMVL_VECTOR *)(data))))
 #endif
 
+
+/*! 
+ *  @def mvl_vector_data_uint8(data)
+ * 	Access UINT8 array of LIBMVL_VECTOR
+ * 	
+ *  @def mvl_vector_data_int32(data)
+ * 	Access INT32 array of LIBMVL_VECTOR
+ * 	
+ *  @def mvl_vector_data_int64(data)
+ * 	Access INT64 array of LIBMVL_VECTOR
+ * 	
+ *  @def mvl_vector_data_float(data)
+ * 	Access FLOAT array of LIBMVL_VECTOR
+ * 	
+ *  @def mvl_vector_data_double(data)
+ * 	Access DOUBLE array of LIBMVL_VECTOR
+ * 	
+ *  @def mvl_vector_data_offset(data)
+ * 	Access LIBMVL_OFFSET64 array of LIBMVL_VECTOR
+ * 	
+ * 
+ * 
+ */
+
+#define mvl_vector_data_uint8(data)	((unsigned char *)(((const char *) data)+sizeof(LIBMVL_VECTOR_HEADER)))
+#define mvl_vector_data_int32(data)	((int *)(((const char *) data)+sizeof(LIBMVL_VECTOR_HEADER)))
+#define mvl_vector_data_int64(data)	((long long int *)(((const char *) data)+sizeof(LIBMVL_VECTOR_HEADER)))
+#define mvl_vector_data_float(data)	((float *)(((const char *) data)+sizeof(LIBMVL_VECTOR_HEADER)))
+#define mvl_vector_data_double(data)	((double *)(((const char *) data)+sizeof(LIBMVL_VECTOR_HEADER)))
+#define mvl_vector_data_offset(data)	((LIBMVL_OFFSET64 *)(((const char *) data)+sizeof(LIBMVL_VECTOR_HEADER)))
+
 /*! @brief Return offset to metadata of given LIBMVL_VECTOR
  */
 #define mvl_vector_metadata_offset(data)   ((((LIBMVL_VECTOR_HEADER *)(data))->metadata))
@@ -429,6 +462,21 @@ if(mvl_vector_type(vec)==LIBMVL_PACKED_LIST64) {
 
 return(0);
 }
+
+/*! @brief A convenience function to convert an offset into memory mapped data into a pointer to LIBMVL_VECTOR structure.
+ * 
+ *  It assumes that the offset is valid, to validate it see \code{mvl_validate_vector()}
+ * 
+ *  @param data  pointer to memory mapped MVL file
+ *  @param offset 64-bit offset into MVL file
+ *  @return pointer to LIBMVL_VECTOR structure stored in MVL file
+ */
+static inline LIBMVL_VECTOR * mvl_vector_from_offset(void *data, LIBMVL_OFFSET64 offset)
+{
+return(offset==0 ? NULL : (LIBMVL_VECTOR *)(&(((unsigned char*)data)[offset])));
+}
+
+
 
 /* These two convenience functions are meant for retrieving a few values, such as stored configuration parameters.
  * Only floating point and offset values are supported as output because they have intrinsic notion of invalid value.
@@ -883,6 +931,27 @@ for(i=0;i<count;i++) {
 return(x);
 }
 
+/*! @brief Flags passed to mvl_hash_indices() and mvl_hash_range()
+ * 
+ *  Use LIBMVL_COMPLETE_HASH when computation is done in a single call, or spread out the computation over multiple calls.
+ *  Initialization and finalization can also be done outside of mvl_hash_*() functions.
+ * 
+*   @def LIBMVL_ACCUMULATE_HASH
+*     No initialization or finalization, just accumulate hash value
+*   @def LIBMVL_INIT_HASH	
+*     Initialize hash value, then accumulate
+*   @def LIBMVL_FINALIZE_HASH	
+*     Accumulate hash value and then finalize
+*   @def LIBMVL_COMPLETE_HASH 
+*    Initialize, accumulate, finalize.
+*/
+
+
+#define LIBMVL_ACCUMULATE_HASH	0
+#define LIBMVL_INIT_HASH	1
+#define LIBMVL_FINALIZE_HASH	2
+#define LIBMVL_COMPLETE_HASH (LIBMVL_INIT_HASH | LIBMVL_FINALIZE_HASH)
+
 /* This function is used to compute 64 bit hash of vector values
  * array hash[] is passed in and contains the result of the computation
  * 
@@ -890,7 +959,8 @@ return(x);
  * 
  * Floats and doubles are trickier - we can guarantee that the hash of float promoted to double is the same as the hash of the original float, but not the reverse.
  */
-int mvl_hash_indices(LIBMVL_OFFSET64 indices_count, const LIBMVL_OFFSET64 *indices, LIBMVL_OFFSET64 *hash, LIBMVL_OFFSET64 vec_count, LIBMVL_VECTOR **vec, void **vec_data);
+int mvl_hash_indices(LIBMVL_OFFSET64 indices_count, const LIBMVL_OFFSET64 *indices, LIBMVL_OFFSET64 *hash, LIBMVL_OFFSET64 vec_count, LIBMVL_VECTOR **vec, void **vec_data, int flags);
+int mvl_hash_range(LIBMVL_OFFSET64 i0, LIBMVL_OFFSET64 i1, LIBMVL_OFFSET64 *hash, LIBMVL_OFFSET64 vec_count, LIBMVL_VECTOR **vec, void **vec_data, int flags);
 
 /* This structure can either be allocated by libMVL or constructed by the caller 
  * In the latter case read comments describing size constraints 
@@ -914,8 +984,8 @@ int mvl_hash_indices(LIBMVL_OFFSET64 indices_count, const LIBMVL_OFFSET64 *indic
 
 /*! @brief This structure is used for constructing associative maps and also for describing index groupings
  * 
- *  This structure can either be allocated by mvl_allocate_hash_map() or constructed by the caller. In the latter case read comments describing size constraints.
- *  The purpose of having index_size is to facilitate memory reuse by allocating the structure with index_size large enough to accomodate subsequent calls with different index_count
+ *  This structure can either be allocated by mvl_allocate_hash_map() or constructed by the caller. In the latter case read comments describing size constraints. You can use flags to indicate that some arrays are not to be freed, such as when they point into memory mapped data.
+ *  The purpose of having hash_size is to facilitate memory reuse by allocating the structure with hash_size large enough to accomodate subsequent calls with different hash_count
  */
 typedef struct {
 	LIBMVL_OFFSET64 flags; //!< flags describing HASH_MAP state
@@ -963,6 +1033,93 @@ int mvl_find_matches(LIBMVL_OFFSET64 key_indices_count, const LIBMVL_OFFSET64 *k
  */
 void mvl_find_groups(LIBMVL_OFFSET64 indices_count, const LIBMVL_OFFSET64 *indices, LIBMVL_OFFSET64 vec_count, LIBMVL_VECTOR **vec, void **vec_data, HASH_MAP *hm);
 
+
+/*! @brief List of offsets partitioning the vector. First element is always 0, last element is vector size.
+ * 
+ *  These are very convenient to describe vector stretches with some properties. Also see description of LIBMVL_PACKED_LIST64.
+ */
+typedef struct {
+	LIBMVL_OFFSET64 size;   //!<  Space allocated for start and stop arrays
+	LIBMVL_OFFSET64 count;  //!<  extent has count valid elements
+	LIBMVL_OFFSET64 *offset; //!<  First extent element
+	} LIBMVL_PARTITION;
+
+void mvl_init_partition(LIBMVL_PARTITION *el);
+void mvl_extend_partition(LIBMVL_PARTITION *el, LIBMVL_OFFSET64 nelem);
+void mvl_find_repeats(LIBMVL_PARTITION *partition, LIBMVL_OFFSET64 count, LIBMVL_VECTOR **vec, void **data);
+void mvl_free_partition_arrays(LIBMVL_PARTITION *el);
+
+#ifndef LIBMVL_EXTENT_INLINE_SIZE
+#define LIBMVL_EXTENT_INLINE_SIZE 4
+#endif
+
+/*! @brief List of extents - ranges of consequentive indices. Similar to partition, but they do not have to follow each other.
+ * 
+ *  The inline arrays are there to optimize for the common case of few extents and reduce the number of memory allocation calls.
+ */
+typedef struct {
+	LIBMVL_OFFSET64 size; //!<  Space allocated for start and stop arrays
+	LIBMVL_OFFSET64 count; //!<  extent has count valid elements
+	LIBMVL_OFFSET64 *start; //!<  First extent element
+	LIBMVL_OFFSET64 *stop; //!<  First element just past the extent end
+	LIBMVL_OFFSET64 start_inline[LIBMVL_EXTENT_INLINE_SIZE];
+	LIBMVL_OFFSET64 stop_inline[LIBMVL_EXTENT_INLINE_SIZE];
+	} LIBMVL_EXTENT_LIST;
+
+void mvl_init_extent_list(LIBMVL_EXTENT_LIST *el);
+void mvl_free_extent_list_arrays(LIBMVL_EXTENT_LIST *el);
+void mvl_extend_extent_list(LIBMVL_EXTENT_LIST *el, LIBMVL_OFFSET64 nelem);
+
+/*! @brief An index into a table-like set of vectors with equal number of elements
+ * 
+ *  While it would work for any such vector set the structure has been optimized for the case of rows with repeated values,
+ *  such as occur with sorted tables.
+ */
+typedef struct {
+	LIBMVL_PARTITION partition;
+	HASH_MAP hash_map;
+	} LIBMVL_EXTENT_INDEX;
+
+	
+void mvl_init_extent_index(LIBMVL_EXTENT_INDEX *ei);
+void mvl_free_extent_index_arrays(LIBMVL_EXTENT_INDEX *ei);
+int mvl_compute_extent_index(LIBMVL_EXTENT_INDEX *ei, LIBMVL_OFFSET64 count, LIBMVL_VECTOR **vec, void **data);
+LIBMVL_OFFSET64 mvl_write_extent_index(LIBMVL_CONTEXT *ctx, LIBMVL_EXTENT_INDEX *ei);
+int mvl_load_extent_index(LIBMVL_CONTEXT *ctx, void *data, LIBMVL_OFFSET64 offset, LIBMVL_EXTENT_INDEX *ei);
+
+/*! @brief Alter extent list to contain no extents without freeing memory
+ *  @param el pointer to extern list structure to add extents to
+ */
+static inline void mvl_empty_extent_list(LIBMVL_EXTENT_LIST *el)
+{
+el->count=0;
+}
+
+
+/*! @brief Find extents in index corresponding to a given hash
+ *  @param ei pointer to populated extent index structure
+ *  @param hash 64-bit hash value to query
+ *  @param el pointer to extern list structure to add extents to
+ */
+static inline void mvl_get_extents(LIBMVL_EXTENT_INDEX *ei, LIBMVL_OFFSET64 hash, LIBMVL_EXTENT_LIST *el)
+{
+LIBMVL_OFFSET64 idx, count;
+
+count=ei->hash_map.hash_count;
+idx=ei->hash_map.hash_map[hash & (ei->hash_map.hash_map_size-1)];
+
+while(idx<count) {
+	if(hash==ei->hash_map.hash[idx]) {
+		if(el->count>=el->size)mvl_extend_extent_list(el, 0);
+		el->start[el->count]=ei->partition.offset[idx];
+		el->stop[el->count]=ei->partition.offset[idx+1];
+		el->count++;
+		}
+	idx=ei->hash_map.next[idx];
+	}
+}
+
+
 /*! @brief Vector statistics.
  * 
  *  This structure can be allocated on stack.
@@ -972,6 +1129,8 @@ typedef struct {
 	double min; //!< minimum value of vector entries
 	double center; //!< a value in the "middle" of the vector
 	double scale;  //!< normalization scale
+	double average_repeat_length; //!< average length of stretch with identical elements
+	double nrepeat; //!< number of stretches with identical elements
 	} LIBMVL_VEC_STATS;
 
 void mvl_compute_vec_stats(const LIBMVL_VECTOR *vec, LIBMVL_VEC_STATS *stats);

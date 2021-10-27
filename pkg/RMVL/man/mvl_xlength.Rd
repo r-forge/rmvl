@@ -2,7 +2,7 @@
 % Please edit documentation in R/RMVL.R
 \name{mvl_xlength}
 \alias{mvl_xlength}
-\title{Return length of R vector in numeric format}
+\title{Return length of R vector as a numeric value}
 \usage{
 mvl_xlength(x)
 }

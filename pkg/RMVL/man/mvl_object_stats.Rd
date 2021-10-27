@@ -4,12 +4,14 @@
 \alias{mvl_object_stats}
 \title{Return MVL object properties}
 \usage{
-mvl_object_stats(MVLHANDLE, offset = NULL)
+mvl_object_stats(MVLHANDLE, offset = NULL, scan = FALSE)
 }
 \arguments{
 \item{MVLHANDLE}{either a handle provided by mvl_open() or an MVL object such as produced by indexing operators}
 
 \item{offset}{offset to the object which properties are to be retrieved}
+
+\item{scan}{scan vector element to obtain additional statistics}
 }
 \value{
 list with object properties

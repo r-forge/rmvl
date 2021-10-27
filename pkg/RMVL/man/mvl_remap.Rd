@@ -20,7 +20,7 @@ The MVL file directory is updated to include recently added entries.  Old handle
 MVL_OBJECT's previously obtained from this handle continue to be valid.
 }
 \details{
-\code{mvl_open} returns a handle with updated directory.
+\code{mvl_remap} returns a handle with updated directory.
 }
 \examples{
 \dontrun{
