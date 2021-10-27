@@ -23,7 +23,7 @@ For each row, we call the function \code{fn(i, idx)}, where \code{i} gives the i
 \details{
 64-bit hashes have very few collisions, nevertheless the user is advised to double check that the values actually match.
 
-The hash computation is type dependent, so \code{1} stored as an integer will produce a different hash than when stored as floating point.
+The hash computation is type dependent, so \code{1} stored as an integer will produce a different hash than when stored as floating point. This function accounts for this by internally converting to types the index was generated with.
 }
 \examples{
 \dontrun{
