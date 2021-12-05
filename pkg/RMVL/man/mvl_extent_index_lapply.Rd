@@ -17,10 +17,12 @@ mvl_extent_index_lapply(extent_index, data_list, fn)
 a list of results of function \code{fn}
 }
 \description{
-This function is passed the index computed by \code{mvl_write_extent_index()} and a list of vectors, which rows are used to compute 64-bit hashes.
-For each row, we call the function \code{fn(i, idx)}, where \code{i} gives the index of query row, and \code{idx} gives the indices of with matching hashes.
+Please use generic function \code{mvl_index_lapply()} instead.
 }
 \details{
+This function is passed the index computed by \code{mvl_write_extent_index()} and a list of vectors, which rows are used to compute 64-bit hashes.
+For each row, we call the function \code{fn(i, idx)}, where \code{i} gives the index of query row, and \code{idx} gives the indices of with matching hashes.
+
 64-bit hashes have very few collisions, nevertheless the user is advised to double check that the values actually match.
 
 The hash computation is type dependent, so \code{1} stored as an integer will produce a different hash than when stored as floating point. This function accounts for this by internally converting to types the index was generated with.
@@ -40,5 +42,5 @@ mvl_extent_index_lapply(Mtmp["df1_extent_index_y", ref=TRUE], ,
 }
 }
 \seealso{
-\code{\link{mvl_group}}
+\code{\link{mvl_index_lapply}}, \code{\link{mvl_group}}
 }

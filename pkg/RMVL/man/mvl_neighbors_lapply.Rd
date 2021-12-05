@@ -17,6 +17,9 @@ mvl_neighbors_lapply(spatial_index, data_list, fn)
 a list of results of function \code{fn}
 }
 \description{
+Please use generic function \code{mvl_index_lapply()} instead.
+}
+\details{
 This function is passed the index computed by \code{mvl_write_spatial_index1} and a list of vectors, which rows are interpreted as points.
 For each row, we call the function \code{fn(i, idx)}, where \code{i} gives the index of query row, and \code{idx} gives the indices of nearby rows.
 }

@@ -32,13 +32,13 @@ mvl_write_object(Mtmp, data.frame(x=runif(100), y=(1:100) \%\% 10), "df1")
 Mtmp<-mvl_remap(Mtmp)
 mvl_write_extent_index(Mtmp, list(Mtmp$df1[,"y",ref=TRUE]), "df1_extent_index_y")
 Mtmp<-mvl_remap(Mtmp)
-mvl_extent_index_lapply(Mtmp["df1_extent_index_y", ref=TRUE], list(c(2, 3)),
+mvl_index_lapply(Mtmp["df1_extent_index_y", ref=TRUE], list(c(2, 3)),
                                            function(i, idx) { return(list(i, idx))})
 # Example of full scan
-mvl_extent_index_lapply(Mtmp["df1_extent_index_y", ref=TRUE], ,
+mvl_index_lapply(Mtmp["df1_extent_index_y", ref=TRUE], ,
                                            function(i, idx) { return(list(i, idx))})
 }
 }
 \seealso{
-\code{\link{mvl_order_vectors}}, \code{\link{mvl_find_matches}}, \code{\link{mvl_group}}, \code{\link{mvl_find_matches}}, \code{\link{mvl_indexed_copy}}, \code{\link{mvl_merge}}, \code{\link{mvl_hash_vectors}}, \code{\link{mvl_get_groups}}
+\code{\link{mvl_order_vectors}}, \code{\link{mvl_index_lapply}}, \code{\link{mvl_find_matches}}, \code{\link{mvl_group}}, \code{\link{mvl_find_matches}}, \code{\link{mvl_indexed_copy}}, \code{\link{mvl_merge}}, \code{\link{mvl_hash_vectors}}, \code{\link{mvl_get_groups}}
 }

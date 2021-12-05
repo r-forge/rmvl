@@ -16,7 +16,7 @@ a list of vectors of indices
 }
 \description{
 This function is passed the index computed by \code{mvl_write_spatial_index1} and a list of vectors, which rows are interpreted as points.
-For each row, the function returns a list of indices describing rows that are close to it.
+For each row, the function returns a vector of indices describing rows that are close to it.
 }
 \examples{
 \dontrun{
@@ -30,5 +30,5 @@ print(mvl_get_neighbors(Mtmp["df1_sp_groups", ref=TRUE], list(c(0.5, 0.6), c(2, 
 }
 }
 \seealso{
-\code{\link{mvl_write_spatial_index1}}
+\code{\link{mvl_write_spatial_index1}}, \code{\link{mvl_index_lapply}}
 }

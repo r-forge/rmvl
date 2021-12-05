@@ -24,7 +24,7 @@ mvl_rewrite_vector(obj, offset, x)
 }
 \description{
 While \code{mvl_fused_write_objects} can be used to create very large vectors and data frames of arbitrary type, it requires
-piecewise data to be written first into an MVL file. These two functions provide a way to create very long vectors in one pass.
+piecewise data to be written first into an MVL file. Functions \code{mvl_start_write_vector()} and \code{mvl_rewrite_vector()} provide a way to create very long vectors in one pass.
 Only numeric and integer vectors are supported.
 }
 \details{

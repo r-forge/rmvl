@@ -9,7 +9,7 @@ mvl_index_lapply(index, data_list, fn)
 \arguments{
 \item{index}{MVL_OBJECT computed by \code{mvl_write_spatial_index1} or \code{mvl_write_extent_index}}
 
-\item{data_list}{a list of vectors of equal length. They can be MVL_OBJECTs or R vectors.}
+\item{data_list}{a list of vectors of equal length. They can be MVL_OBJECTs or R vectors, or a data.fame.}
 
 \item{fn}{a function of one argument - list of indices}
 }
@@ -17,8 +17,13 @@ mvl_index_lapply(index, data_list, fn)
 a list of results of function \code{fn}
 }
 \description{
-This function is passed the index computed by \code{mvl_write_spatial_index1} and a list of vectors, which rows are interpreted as points.
-For each row, we call the function \code{fn(i, idx)}, where \code{i} gives the index of query row, and \code{idx} gives the indices of nearby rows.
+This function is passed the index computed by \code{mvl_write_spatial_index1} or \code{mvl_write_extent_index} and a list of vectors, which are interpreted in a data frame fashion, or an R data.frame.
+For each row we retrieve that set of indices that matches it and call function fn(i, idx) with index i of row being processed and vector idx listing matched indices.
+}
+\details{
+The notion of "matched index" is specific to type of index being used:
+* for an index created with \code{mvl_write_spatial_index1} we return the indices of nearby rows. The user should apply an additional cut to narrow down to actual indices needed.
+* for an index created with \code{mvl_write_extent_index} we return the indices of rows with identical hashes. Even though 64-bit hashes produce very few collisions, it is recommended to apply additional cut to ensure that only the exactly matching rows are returned.
 }
 \examples{
 \dontrun{
