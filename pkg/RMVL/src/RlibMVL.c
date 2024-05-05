@@ -528,8 +528,8 @@ return(0);
 
 SEXP get_status(void)
 {
-int max_N=20;
-int idx=0, idx2, n_open;
+int max_N=10;
+int idx=0, idx2, n_open, nunprot=0;
 int j;
 SEXP names, ans, data;
 	
@@ -553,7 +553,6 @@ add_status("offset64_bytes", ScalarInteger(sizeof(LIBMVL_OFFSET64)));
 add_status("vector_header_bytes", ScalarInteger(sizeof(LIBMVL_VECTOR_HEADER)));
 
 // This confuses Rchk, but doing manually is worse because Rchk does not properly handle macro expansion
-UNPROTECT(idx);
 
 n_open=0;
 for(j=0;j<libraries_free;j++)
@@ -570,7 +569,7 @@ for(j=0;j<libraries_free;j++)
 		}
 		
 add_status("library_handles", data);
-UNPROTECT(1);
+nunprot++;
 
 data=PROTECT(allocVector(INTSXP, n_open));
 idx2=0;
@@ -581,7 +580,7 @@ for(j=0;j<libraries_free;j++)
 		}
 		
 add_status("library_flags", data);
-UNPROTECT(1);
+nunprot++;
 
 data=PROTECT(allocVector(LGLSXP, n_open));
 idx2=0;
@@ -592,7 +591,7 @@ for(j=0;j<libraries_free;j++)
 		}
 		
 add_status("library_modified", data);
-UNPROTECT(1);
+nunprot++;
 
 data=PROTECT(allocVector(REALSXP, n_open));
 idx2=0;
@@ -603,16 +602,16 @@ for(j=0;j<libraries_free;j++)
 		}
 		
 add_status("library_length", data);
-UNPROTECT(1);
+nunprot++;
 
 #undef add_status
-if(idx<max_N) {
-	SETLENGTH(names, idx);
-	SETLENGTH(ans, idx);
+if(idx!=max_N) {
+	Rprintf("*** RMVL INTERNAL ERROR: idx=%d vs max_N=%d in %s:%d\n",
+		idx, max_N, __FILE__, __LINE__);
 	}
 
 setAttrib(ans, R_NamesSymbol, names);
-UNPROTECT(2);
+UNPROTECT(idx+nunprot+2);
 return(ans);
 }
 
@@ -4337,8 +4336,8 @@ SEXP neighbors_lapply(SEXP spatial_index, SEXP data_list, SEXP fn, SEXP env)
 LIBMVL_OFFSET64 data_offset, index_offset, *query_mark, Nv, N2, indices_size, indices_free, *indices;
 int data_idx, index_idx;
 LIBMVL_VECTOR *vec_bits, *vec_first, *vec_first_mark, *vec_prev_mark, *vec_mark, *vec_prev, *vec, *vec_stats, *vec_max_count;
-SEXP ans, sa, R_fcall, tmp;
-double *values, *pd;
+SEXP ans, sa, sa2, R_fcall, tmp;
+double *values, *pd, *pd2;
 LIBMVL_NAMED_LIST *L;
 int *bits, Nbits;
 long long *first, *first_mark, *prev_mark, *mark, *prev, max_count, ball_size;
@@ -4553,16 +4552,25 @@ for(LIBMVL_OFFSET64 i=0;i<Nv;i++) {
 			}
 		}
 
-	SETLENGTH(sa, indices_free);
+	//SETLENGTH(sa, indices_free);
+	
+	sa2=PROTECT(allocVector(REALSXP, indices_free));
+	// ENABLE_REFCNT(sa);
+	// INCREMENT_REFCNT(sa);
+	// INCREMENT_NAMED(sa);
+	pd2=REAL(sa2);
+	
+	for(LIBMVL_OFFSET64 m=0;m<indices_free;m++) pd2[m]=pd[m];
+	
 	SETCADR(R_fcall, ScalarReal(i+1));
-	SETCADDR(R_fcall, duplicate(sa));
+	SETCADDR(R_fcall, sa2);
 //	fprintf(stderr, "%lld %d %d %d (a)\n", i, MAYBE_REFERENCED(sa), -1, -1);
 	tmp=PROTECT(eval(R_fcall, env));
 //	if(MAYBE_REFERENCED(tmp))tmp=duplicate(tmp);
 //	fprintf(stderr, "%lld %d %d %d (b)\n", i, MAYBE_REFERENCED(sa), -1, MAYBE_REFERENCED(tmp));
 
 	SET_VECTOR_ELT(ans, i, tmp);
-	UNPROTECT(1);
+	UNPROTECT(2);
 	}
 	
 free(values);
@@ -5108,6 +5116,7 @@ ans=PROTECT(allocVector(VECSXP, N));
 
 R_fcall = PROTECT(lang2(fn, R_NilValue));
 
+#if 0
 stretch_max=1;
 for(LIBMVL_OFFSET64 i=0;i<N;i++) {
 	LIBMVL_OFFSET64 k=psi[i+1]-psi[i];
@@ -5116,6 +5125,7 @@ for(LIBMVL_OFFSET64 i=0;i<N;i++) {
 	
 vidx=PROTECT(allocVector(REALSXP, stretch_max));
 pidx2=REAL(vidx);
+#endif
 
 for(LIBMVL_OFFSET64 i=0;i<N;i++) {
 	LIBMVL_OFFSET64 k0, k1;
@@ -5123,17 +5133,20 @@ for(LIBMVL_OFFSET64 i=0;i<N;i++) {
 	k1=psi[i+1]-1;
 	if(k1<=k0)continue;
 	if(k0 >= Nidx || k1>Nidx)continue;
-	SETLENGTH(vidx, k1-k0);
+	//SETLENGTH(vidx, k1-k0);
+
+	vidx=PROTECT(allocVector(REALSXP, k1-k0));
+	pidx2=REAL(vidx);
 	
 	for(LIBMVL_OFFSET64 j=k0;j<k1;j++) {
 		pidx2[j-k0]=pidx[j];
 		}
-	SETCADR(R_fcall, duplicate(vidx));
+	SETCADR(R_fcall, vidx);
 	SET_VECTOR_ELT(ans, i, PROTECT(eval(R_fcall, env)));
-	UNPROTECT(1);
+	UNPROTECT(2);
 	}
 
-UNPROTECT(3);
+UNPROTECT(2);
 return(ans);
 }
 
