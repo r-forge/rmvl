@@ -75,7 +75,15 @@ return(p);
 
 #else
 
+#ifdef __WIN32__
+
+#define off_t  long long int
+
+#else 
+
 #define HAVE_FTELLO
+
+#endif
 
 #endif
 
@@ -84,9 +92,16 @@ off_t do_ftello(FILE *f)
 #ifdef HAVE_FTELLO
 return(ftello(f));
 #else
+
+#ifdef __WIN32__
+fflush(f);
+return(_lseeki64(fileno(f), 0, SEEK_CUR));
+
+#else
 /* ftello() is broken on MacOS >= 10.15 */
 fflush(f);
 return(lseek(fileno(f), 0, SEEK_CUR));
+#endif
 #endif
 }
 
@@ -679,7 +694,7 @@ ctx->tmp_vh.metadata=metadata;
 
 offset=do_ftello(ctx->f);
 
-if((long long)offset<0) {
+if((long long int)offset<0) {
 	perror("mvl_write_vector");
 	mvl_set_error(ctx, LIBMVL_ERR_FTELL);
 	}
@@ -862,11 +877,11 @@ unsigned char *zeros;
 
 if(data==NULL) {
 	data=ctx->data;
-	}
 
-if(data==NULL) {
-	mvl_set_error(ctx, LIBMVL_ERR_NO_DATA);
-	return(LIBMVL_NULL_OFFSET);
+	if(data==NULL) {
+		mvl_set_error(ctx, LIBMVL_ERR_NO_DATA);
+		return(LIBMVL_NULL_OFFSET);
+		}
 	}
 	
 data8=(unsigned char *)data;
@@ -899,7 +914,7 @@ buffer=do_malloc(LIBMVL_INTERNAL1_HASH64_BLOCKSIZE, sizeof(*buffer));
 	
 offset=do_ftello(ctx->f);
 
-if((long long)offset<0) {
+if((long long int)offset<0) {
 	perror("mvl_write_vector");
 	mvl_set_error(ctx, LIBMVL_ERR_FTELL);
 	}
@@ -955,14 +970,19 @@ LIBMVL_OFFSET64 block, buffer_idx, block_stop, hash, start2, stop2;
 unsigned char *data8;
 LIBMVL_OFFSET64 *buffer;
 
+if(stop==start) {
+	/* Nothing to check */
+	return(0);
+	}
+	
 if(data==NULL) {
 	data=ctx->data;
 	data_size=ctx->data_size;
-	}
 
-if(data==NULL) {
-	mvl_set_error(ctx, LIBMVL_ERR_NO_DATA);
-	return(-1);
+	if(data==NULL) {
+		mvl_set_error(ctx, LIBMVL_ERR_NO_DATA);
+		return(-1);
+		}
 	}
 	
 data8=(unsigned char *)data;
@@ -993,11 +1013,6 @@ if(stop<start) {
 	return(-5);
 	}
 
-if(stop==start) {
-	/* Nothing to check */
-	return(0);
-	}
-	
 if(start<hdr->checksum_area_start || stop>hdr->checksum_area_stop) {
 	mvl_set_error(ctx, LIBMVL_ERR_INVALID_OFFSET);
 	return(-6);
@@ -1057,12 +1072,13 @@ unsigned char *data8;
 if(data==NULL) {
 	data=ctx->data;
 	data_size=ctx->data_size;
+	
+	if(data==NULL) {
+		mvl_set_error(ctx, LIBMVL_ERR_NO_DATA);
+		return(-1);
+		}
 	}
 
-if(data==NULL) {
-	mvl_set_error(ctx, LIBMVL_ERR_NO_DATA);
-	return(-1);
-	}
 	
 data8=(unsigned char *)data;
 
@@ -1104,12 +1120,13 @@ int a;
 if(data==NULL) {
 	data=ctx->data;
 	data_size=ctx->data_size;
+	
+	if(data==NULL) {
+		mvl_set_error(ctx, LIBMVL_ERR_NO_DATA);
+		return(-1);
+		}
 	}
 	
-if(data==NULL) {
-	mvl_set_error(ctx, LIBMVL_ERR_NO_DATA);
-	return(-1);
-	}
 	
 data8=(char *)data;
 
@@ -1164,12 +1181,13 @@ char *stop8=(char *)stop;
 if(data==NULL) {
 	data=ctx->data;
 	data_size=ctx->data_size;
+	
+	if(data==NULL) {
+		mvl_set_error(ctx, LIBMVL_ERR_NO_DATA);
+		return(-1);
+		}
 	}
 
-if(data==NULL) {
-	mvl_set_error(ctx, LIBMVL_ERR_NO_DATA);
-	return(-1);
-	}
 	
 data8=(char *)data;
 
@@ -1269,7 +1287,7 @@ for(int i=0;i<ctx->directory->free;i++) {
 	
 cur=do_ftello(ctx->f);
 
-if((long long)cur<0) {
+if((long long int)cur<0) {
 	perror("mvl_write_directory");
 	mvl_set_error(ctx, LIBMVL_ERR_FTELL);
 	}
@@ -1568,12 +1586,13 @@ if(metadata_offset==LIBMVL_NO_METADATA)return(NULL);
 if(data==NULL) {
 	data=ctx->data;
 	data_size=ctx->data_size;
+	
+	if(data==NULL) {
+		mvl_set_error(ctx, LIBMVL_ERR_NO_DATA);
+		return(NULL);
+		}
 	}
 	
-if(data==NULL) {
-	mvl_set_error(ctx, LIBMVL_ERR_NO_DATA);
-	return(NULL);
-	}
 
 if((err=mvl_validate_vector(metadata_offset, data, data_size))!=0) {
 	mvl_set_error(ctx, LIBMVL_ERR_INVALID_OFFSET);
@@ -1638,12 +1657,13 @@ if(offset==LIBMVL_NULL_OFFSET)return(NULL);
 if(data==NULL) {
 	data=ctx->data;
 	data_size=ctx->data_size;
+	
+	if(data==NULL) {
+		mvl_set_error(ctx, LIBMVL_ERR_NO_DATA);
+		return(NULL);
+		}
 	}
 	
-if(data==NULL) {
-	mvl_set_error(ctx, LIBMVL_ERR_NO_DATA);
-	return(NULL);
-	}
 
 if((err=mvl_validate_vector(offset, data, data_size))!=0) {
 	mvl_set_error(ctx, LIBMVL_ERR_INVALID_OFFSET);
@@ -3262,7 +3282,7 @@ switch(mvl_vector_type(vec)) {
 		stats->min=a0;
 		stats->center=(a0+a1)*0.5;
 		if(a1>a0)
-			stats->scale=2/(a1-a0);
+			stats->scale=2.0/(a1-a0);
 			else
 			stats->scale=0.0;
 		break;
@@ -3292,7 +3312,7 @@ switch(mvl_vector_type(vec)) {
 		stats->min=a0;
 		stats->center=(a0+a1)*0.5;
 		if(a1>a0)
-			stats->scale=2/(a1-a0);
+			stats->scale=2.0/(a1-a0);
 			else
 			stats->scale=0.0;
 		break;
@@ -3322,7 +3342,7 @@ switch(mvl_vector_type(vec)) {
 		stats->min=a0;
 		stats->center=(a0*1.0+a1*1.0)*0.5;
 		if(a1>a0)
-			stats->scale=2/(a1-a0);
+			stats->scale=2.0/(a1-a0);
 			else
 			stats->scale=0.0;
 		break;
@@ -3352,7 +3372,7 @@ switch(mvl_vector_type(vec)) {
 		stats->min=a0;
 		stats->center=(a0*1.0+a1*1.0)*0.5;
 		if(a1>a0)
-			stats->scale=2/(a1-a0);
+			stats->scale=2.0/(a1-a0);
 			else
 			stats->scale=0.0;
 		break;

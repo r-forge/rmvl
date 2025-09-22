@@ -1449,9 +1449,10 @@ MVL_TYPE_NAME<-list("UINT8", "INT32", "INT64", "FLOAT", "DOUBLE")
 MVL_TYPE_NAME[[100]]<-"OFFSET64"
 MVL_TYPE_NAME[[101]]<-"CSTRING"
 MVL_TYPE_NAME[[102]]<-"STRVEC"
-	
+MVL_TYPE_NAME[[103]]<-"CHECKSUM64"
+
 mvl_type_name<-function(x) {
-	y<-lapply(MVL_TYPE_NAME[x], function(xx){if(is.null(xx))return(NA); return(xx)})
+	y<-lapply(x, function(xx){tt<-unlist(MVL_TYPE_NAME[xx]) ; if(is.null(tt) || length(tt)<1)return(paste0("UNKNOWN_TYPE(", xx, ")")); return(tt)})
 	return(unlist(y))
 	}
 	
@@ -1468,28 +1469,28 @@ mvl_type_name<-function(x) {
 print.MVL_OBJECT<-function(x, ..., small_length=10) {
 	obj<-unclass(x)
 	object_class<-obj[["metadata"]][["class"]]
-	if(is.null(object_class) || (object_class %in% c("numeric", "integer", "character"))) {
+	if(is.null(object_class) || any(object_class %in% c("numeric", "integer", "character"))) {
 		tname<-mvl_type_name(obj[["type"]])
 		len<-obj[["length"]]
 		cat("MVL_OBJECT(", tname, " length ", len, ")\n", sep="")
 		} else
-	if(object_class %in% c("data.frame", "array", "matrix")) {
+	if(any(object_class %in% c("data.frame", "array", "matrix"))) {
 		od<-obj[["metadata"]][["dim"]]
 		if(is.null(od))od<-obj[["length"]]
 		
 		nm<-obj[["metadata"]][["names"]]
 		if(length(nm)<1 || length(od)!=2) 
-			cat("MVL_OBJECT(", mvl_type_name(obj[["type"]]), " ", object_class, " ", paste0(od, collapse="x"), ")\n", sep="")
+			cat("MVL_OBJECT(", mvl_type_name(obj[["type"]]), " ", paste0(object_class, collapse=","), " ", paste0(od, collapse="x"), ")\n", sep="")
 			else
 		if(length(nm)< small_length) 
-			cat("MVL_OBJECT(", mvl_type_name(obj[["type"]]), " ", object_class, " ", paste0(od, collapse="x"), " [,c(\"", paste0(nm, collapse="\", \""), "\")] )\n", sep="")
+			cat("MVL_OBJECT(", mvl_type_name(obj[["type"]]), " ", paste0(object_class, collapse=","), " ", paste0(od, collapse="x"), " [,c(\"", paste0(nm, collapse="\", \""), "\")] )\n", sep="")
 			else
-			cat("MVL_OBJECT(", mvl_type_name(obj[["type"]]), " ", object_class, " ", paste0(od, collapse="x"), " [,c(\"", paste0(nm[1:small_length], collapse="\", \""), "\", ...)] )\n", sep="")
+			cat("MVL_OBJECT(", mvl_type_name(obj[["type"]]), " ", paste0(object_class, collapse=","), " ", paste0(od, collapse="x"), " [,c(\"", paste0(nm[1:small_length], collapse="\", \""), "\", ...)] )\n", sep="")
 		} else
 	if(any(object_class=="MVL_INDEX")) {
 		print.MVL_INDEX(x, ...)
 		} else {
-		cat("MVL_OBJECT(", mvl_type_name(obj[["type"]]), " ", object_class, ")\n", sep="")
+		cat("MVL_OBJECT(", mvl_type_name(obj[["type"]]), " ", paste0(object_class, collapse=","), ")\n", sep="")
 		}
 	invisible(obj)
 	}
